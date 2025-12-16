@@ -443,7 +443,7 @@ func (r *Router) parseOptions(arg reflect.Type, isPtr bool) (reflect.Value, erro
 }
 
 func (r *Router) parseField(field reflect.StructField, val reflect.Value) error {
-	short, long, dft, desc, sep, err := parseTag(field)
+	short, long, dft, zeroDft, desc, sep, err := parseTag(field)
 	if err != nil {
 		return err
 	}
@@ -451,11 +451,20 @@ func (r *Router) parseField(field reflect.StructField, val reflect.Value) error 
 		dft = reflect.ValueOf(dft).Convert(field.Type).Interface()
 	}
 
-	r.fs.AnyVar(val.Addr().Interface(), short, long, dft, desc, sep...)
+	opts := make([]flags.Options, 0, len(sep)+1)
+	if len(sep) > 0 {
+		opts = append(opts, flags.WithSliceSeperator(sep[0]))
+	}
+	if len(sep) > 1 {
+		opts = append(opts, flags.WithKeyValueSeperator(sep[1]))
+	}
+	opts = append(opts, flags.WithZeroDefault(zeroDft))
+
+	r.fs.AnyVar(val.Addr().Interface(), short, long, dft, desc, opts...)
 	return nil
 }
 
-func parseTag(field reflect.StructField) (short byte, long string, dft any, desc string, sep []string, err error) {
+func parseTag(field reflect.StructField) (short byte, long string, dft any, zeroDft bool, desc string, sep []string, err error) {
 	if tagShort := field.Tag.Get("short"); tagShort != "" {
 		if len(tagShort) > 1 {
 			err = fmt.Errorf("flagrouter: invalid short tag %q: length must be 1", tagShort)
@@ -473,7 +482,8 @@ func parseTag(field reflect.StructField) (short byte, long string, dft any, desc
 		}
 	}
 
-	if tagDft := field.Tag.Get("dft"); tagDft != "" {
+	tagDft, zeroDft := field.Tag.Lookup("dft")
+	if tagDft != "" {
 		dft, err = parseDefault(field.Type, tagDft, sep...)
 		if err != nil {
 			return
