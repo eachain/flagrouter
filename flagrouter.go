@@ -22,6 +22,12 @@ func New(name, desc string) *Router {
 	}
 }
 
+func Cmdline(desc string) *Router {
+	return &Router{
+		fs: flags.Cmdline(desc),
+	}
+}
+
 // middleware must be one of following format:
 //   - `func()`
 //   - `func(context.Context)`
@@ -110,6 +116,16 @@ var (
 // Run parse args and exec the subcommand.
 func (r *Router) Run(ctx context.Context, args ...string) (string, error) {
 	return r.fs.Run(ctx, args...)
+}
+
+// RunCmdline parse os.args and exec the subcommand.
+func (r *Router) RunCmdline(ctx context.Context) {
+	r.fs.RunCmdline(ctx)
+}
+
+// Parsed: return whether the var is parsed.
+func (r *Router) Parsed(pointer any) bool {
+	return r.fs.Parsed(pointer)
 }
 
 var (

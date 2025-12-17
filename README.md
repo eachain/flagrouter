@@ -1,12 +1,10 @@
 # flagrouter
 
-flagrouter是基于`github.com/eachain/flags`的参数解析框架。该库设计思路来源于[macaron](https://go-macaron.com)框架，旨在将参数解析框架化。
-
-
+flagrouter 是基于`github.com/eachain/flags`的参数解析框架。该库设计思路来源于[macaron](https://go-macaron.com)框架，旨在将参数解析框架化。
 
 ## 用法
 
-flagrouter需要将参数列表定义为一个`struct`，格式示例如下：
+flagrouter 需要将参数列表定义为一个`struct`，格式示例如下：
 
 ```go
 type arg struct {
@@ -14,14 +12,14 @@ type arg struct {
 }
 ```
 
-支持的tag有：
+支持的 tag 有：
 
 - `short`：短参数，仅支持一个字符，取值范围为`[a-z,A-Z]`；
 - `long`：长参数，一个字符串，不需要前缀`--`；
 - `dft`：默认值，如果参数解析时不传该参数，则该字段被设定为默认值；
 - `desc`：参数描述，描述该参数作用。
 
-flagrouter支持中间件格式：
+flagrouter 支持中间件格式：
 
 - `func()`
 - `func(context.Context)`
@@ -33,14 +31,12 @@ flagrouter支持中间件格式：
 - `func(context.Context, arg, handler func())` or `func(context.Context, *arg, handler func())`
 - `func(context.Context, arg, handler func(context.Context))` or `func(context.Context, *arg, handler func(context.Context))`
 
-flagrouter支持handler格式：
+flagrouter 支持 handler 格式：
 
 - `func()`
 - `func(context.Context)`
 - `func(arg)` or `func(*arg)`
 - `func(context.Context, arg)` or `func(context.Context, *arg)`
-
-
 
 ## 示例
 
@@ -50,10 +46,7 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/eachain/flagrouter"
 )
@@ -63,14 +56,14 @@ type ConfigOptions struct {
 }
 
 func main() {
-	r := flagrouter.New(filepath.Base(os.Args[0]), "this is a test app desc")
+	r := flagrouter.Cmdline("this is a test app desc")
 
 	r.Stmt(func() {
 		r.Use(func() {
 			fmt.Println("stmt middleware: only valid for stmt cmd")
 		})
 		r.HandleGroup("stmt", "the stmt subcommand", func(opt *ConfigOptions) {
-			fmt.Printf("stmt handler, config: %v\n", opt.File)
+			fmt.Printf("stmt handler, config: %v (parsed: %v)\n", opt.File, r.Parsed(&opt.File))
 		})
 	})
 
@@ -102,15 +95,7 @@ func main() {
 		})
 	})
 
-	if usage, err := r.Run(context.Background(), os.Args[1:]...); err != nil {
-		if errors.Is(err, flagrouter.ErrHelp) || errors.Is(err, flagrouter.ErrNoExecFunc) {
-			fmt.Fprintln(os.Stderr, usage)
-			return
-		}
-
-		fmt.Fprintln(os.Stderr, err.Error())
-		os.Exit(1)
-	}
+	r.RunCmdline(context.Background())
 }
 ```
 
@@ -141,7 +126,7 @@ Commands:
 执行`go run test.go`：
 
 ```bash
-$ go run test.go   
+$ go run test.go
 config file: app.cfg, used by all following cmds
 main handler
 ```
@@ -163,22 +148,28 @@ Options:
 执行`go run test.go stmt`：
 
 ```bash
-$ go run test.go stmt   
+$ go run test.go stmt
 stmt middleware: only valid for stmt cmd
-stmt handler, config: app.cfg
+stmt handler, config: app.cfg (parsed: false)
+```
+
+执行`go run test.go stmt -c app.cfg`：
+
+```bash
+$ go run test.go stmt
+stmt middleware: only valid for stmt cmd
+stmt handler, config: app.cfg (parsed: true)
 ```
 
 执行`go run test.go foo`：
 
 ```bash
-$ go run test.go foo   
+$ go run test.go foo
 config file: app.cfg, used by all following cmds
 before foo
 foo, context value: 1234567890
 foo quit
 ```
-
-
 
 ### 参数不可重复注册
 
@@ -226,7 +217,7 @@ func main() {
 执行`go run test.go`：
 
 ```bash
-$ go run test.go       
+$ go run test.go
 panic: flags: duplicated short option: -c
 
 goroutine 1 [running]:
@@ -247,4 +238,4 @@ r.Handle(func() {
 })
 ```
 
-实际上，应用程序应尽量避免这种情况。一个参数不应该由多个中间件或handler共同处理。
+实际上，应用程序应尽量避免这种情况。一个参数不应该由多个中间件或 handler 共同处理。
