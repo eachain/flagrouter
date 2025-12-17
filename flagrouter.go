@@ -443,9 +443,16 @@ func (r *Router) parseOptions(arg reflect.Type, isPtr bool) (reflect.Value, erro
 }
 
 func (r *Router) parseField(field reflect.StructField, val reflect.Value) error {
+	if !field.IsExported() {
+		return nil
+	}
+
 	short, long, dft, zeroDft, desc, sep, err := parseTag(field)
 	if err != nil {
 		return err
+	}
+	if short == 0 && long == "" {
+		return nil
 	}
 	if dft != nil {
 		dft = reflect.ValueOf(dft).Convert(field.Type).Interface()
@@ -496,11 +503,21 @@ func parseTag(field reflect.StructField) (short byte, long string, dft any, zero
 }
 
 var (
+	typParser   = reflect.TypeOf(new(flags.Parser)).Elem()
 	typDuration = reflect.TypeOf(time.Duration(0))
 	typDateTime = reflect.TypeOf(time.Time{})
 )
 
 func parseDefault(typ reflect.Type, dft string, sep ...string) (any, error) {
+	if reflect.PointerTo(typ).Implements(typParser) {
+		val := reflect.New(typ)
+		err := val.Interface().(flags.Parser).ParseFlag(dft)
+		if err != nil {
+			return nil, err
+		}
+		return val.Elem().Interface(), nil
+	}
+
 	switch typ {
 	case typDuration:
 		return time.ParseDuration(dft)
