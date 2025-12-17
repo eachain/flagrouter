@@ -113,19 +113,37 @@ var (
 	ErrHelp         = flags.ErrHelp
 )
 
+var ctxRouterKey = new(int)
+
+func getRouter(ctx context.Context) *Router {
+	r, _ := ctx.Value(ctxRouterKey).(*Router)
+	return r
+}
+
+func putRouter(ctx context.Context, r *Router) context.Context {
+	return context.WithValue(ctx, ctxRouterKey, r)
+}
+
 // Run parse args and exec the subcommand.
 func (r *Router) Run(ctx context.Context, args ...string) (string, error) {
-	return r.fs.Run(ctx, args...)
+	return r.fs.Run(putRouter(ctx, r), args...)
 }
 
 // RunCmdline parse os.args and exec the subcommand.
 func (r *Router) RunCmdline(ctx context.Context) {
-	r.fs.RunCmdline(ctx)
+	r.fs.RunCmdline(putRouter(ctx, r))
 }
 
 // Parsed: return whether the var is parsed.
 func (r *Router) Parsed(pointer any) bool {
 	return r.fs.Parsed(pointer)
+}
+
+func Parsed(ctx context.Context, pointer any) bool {
+	if r := getRouter(ctx); r != nil {
+		return r.Parsed(pointer)
+	}
+	return false
 }
 
 var (
