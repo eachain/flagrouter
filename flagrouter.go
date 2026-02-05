@@ -278,7 +278,7 @@ func (r *Router) parseMiddleware(mw any) (flags.Middleware, error) {
 	if !(arg2.ConvertibleTo(typEmptyFunc) || arg2.ConvertibleTo(typHandler)) {
 		return nil, errors.New("middleware with context and option and handler, the second arg must be a func() or func(context)")
 	}
-	param, err := r.parseFuncArgs(arg0, "middleware")
+	param, err := r.parseFuncArgs(arg1, "middleware")
 	if err != nil {
 		return nil, err
 	}
