@@ -167,3 +167,32 @@ func TestUseContext(t *testing.T) {
 		t.Fatalf("handle run: %v", err)
 	}
 }
+
+func TestPosition(t *testing.T) {
+	r := New("handle_position", "")
+
+	r.Handle(func(opt *struct {
+		Float float64 `dft:"1.111"`
+		Int   int     `short:"i" long:"int" dft:"-111"`
+		Bool  bool    `dft:"false"`
+		Str   string  `dft:"abc"`
+	}) {
+		if opt.Float != 2.22 {
+			t.Fatalf("handle options: option.Float: %v", opt.Float)
+		}
+		if opt.Int != 456 {
+			t.Fatalf("handle options: option.Int: %v", opt.Int)
+		}
+		if opt.Bool != true {
+			t.Fatalf("handle options: option.Bool: %v", opt.Bool)
+		}
+		if opt.Str != "def" {
+			t.Fatalf("handle options: option.Str: %v", opt.Str)
+		}
+	})
+
+	_, err := r.Run(context.Background(), "2.22", "-i", "456", "true", "def")
+	if err != nil {
+		t.Fatalf("handle run: %v", err)
+	}
+}

@@ -74,9 +74,9 @@ func (r *Router) Handle(handler any) {
 }
 
 // Group open a new cmd group, use closure to register subcommands.
-func (r *Router) Group(name, desc string, closure func()) {
+func (r *Router) Group(name, desc string, closure func(), aliases ...string) {
 	fs := r.fs
-	r.fs = fs.Cmd(name, desc)
+	r.fs = fs.Cmd(name, desc).Alias(aliases...)
 	closure()
 	r.fs = fs
 }
@@ -101,10 +101,10 @@ func (r *Router) Stmt(closure func()) {
 //	struct {
 //		A int `short:"a" long:"all" dft:"123" desc:"what is a"`
 //	}
-func (r *Router) HandleGroup(name, desc string, handler any) {
+func (r *Router) HandleGroup(name, desc string, handler any, aliases ...string) {
 	r.Group(name, desc, func() {
 		r.Handle(handler)
-	})
+	}, aliases...)
 }
 
 var (
@@ -484,9 +484,6 @@ func (r *Router) parseField(field reflect.StructField, val reflect.Value) error 
 	short, long, dft, zeroDft, desc, sep, err := parseTag(field)
 	if err != nil {
 		return err
-	}
-	if short == 0 && long == "" {
-		return nil
 	}
 	if dft != nil {
 		dft = reflect.ValueOf(dft).Convert(field.Type).Interface()
