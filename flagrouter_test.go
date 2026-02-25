@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 	"time"
+
+	"github.com/eachain/flags"
 )
 
 func TestHandle(t *testing.T) {
@@ -194,5 +196,27 @@ func TestPosition(t *testing.T) {
 	_, err := r.Run(context.Background(), "2.22", "-i", "456", "true", "def")
 	if err != nil {
 		t.Fatalf("handle run: %v", err)
+	}
+}
+
+func TestRequired(t *testing.T) {
+	r := New("handle_required", "")
+
+	r.Handle(func(opt *struct {
+		Int int `short:"i" long:"int" required:"true"`
+	}) {
+		if opt.Int != 456 {
+			t.Fatalf("handle options: option.Int: %v", opt.Int)
+		}
+	})
+
+	_, err := r.Run(context.Background())
+	if err == nil {
+		t.Fatalf("handle run: %v", err)
+	}
+	if re, ok := err.(flags.RequiredError); !ok {
+		t.Fatalf("handle run err type: %T", err)
+	} else if string(re) != "--int" {
+		t.Fatalf("handle run err option: %v", string(re))
 	}
 }

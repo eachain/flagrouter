@@ -42,7 +42,7 @@ func Cmdline(desc string) *Router {
 // and arg must be like:
 //
 //	struct {
-//		A int `short:"a" long:"all" dft:"123" desc:"what is a"`
+//		A int `short:"a" long:"all" required:"true" dft:"123" desc:"what is a"`
 //	}
 func (r *Router) Use(middlewares ...any) {
 	for _, mw := range middlewares {
@@ -63,7 +63,7 @@ func (r *Router) Use(middlewares ...any) {
 // and arg must be like:
 //
 //	struct {
-//		A int `short:"a" long:"all" dft:"123" desc:"what is a"`
+//		A int `short:"a" long:"all" required:"true" dft:"123" desc:"what is a"`
 //	}
 func (r *Router) Handle(handler any) {
 	h, err := r.parseFunc(handler)
@@ -99,7 +99,7 @@ func (r *Router) Stmt(closure func()) {
 // and arg must be like:
 //
 //	struct {
-//		A int `short:"a" long:"all" dft:"123" desc:"what is a"`
+//		A int `short:"a" long:"all" required:"true" dft:"123" desc:"what is a"`
 //	}
 func (r *Router) HandleGroup(name, desc string, handler any, aliases ...string) {
 	r.Group(name, desc, func() {
@@ -169,7 +169,7 @@ var (
 // and arg must be like:
 //
 //	struct {
-//		A int `short:"a" long:"all" dft:"123" desc:"what is a"`
+//		A int `short:"a" long:"all" required:"true" dft:"123" desc:"what is a"`
 //	}
 func (r *Router) parseMiddleware(mw any) (flags.Middleware, error) {
 	// fast path
@@ -363,7 +363,7 @@ func (r *Router) parseMiddlewareFast(mw any, typ reflect.Type) (flags.Middleware
 // and arg must be like:
 //
 //	struct {
-//		A int `short:"a" long:"all" dft:"123" desc:"what is a"`
+//		A int `short:"a" long:"all" required:"true" dft:"123" desc:"what is a"`
 //	}
 func (r *Router) parseFunc(fn any) (flags.Handler, error) {
 	// fast path
@@ -456,7 +456,7 @@ func (r *Router) parseFuncArgs(arg reflect.Type, who string) (reflect.Value, err
 // arg must be like:
 //
 //	struct {
-//		A int `short:"a" long:"all" desc:"what is a" dft:"123"`
+//		A int `short:"a" long:"all" required:"true" desc:"what is a" dft:"123"`
 //	}
 func (r *Router) parseOptions(arg reflect.Type, isPtr bool) (reflect.Value, error) {
 	val := reflect.New(arg)
@@ -481,7 +481,7 @@ func (r *Router) parseField(field reflect.StructField, val reflect.Value) error 
 		return nil
 	}
 
-	short, long, dft, zeroDft, desc, sep, err := parseTag(field)
+	short, long, required, dft, zeroDft, desc, sep, err := parseTag(field)
 	if err != nil {
 		return err
 	}
@@ -497,12 +497,15 @@ func (r *Router) parseField(field reflect.StructField, val reflect.Value) error 
 		opts = append(opts, flags.WithKeyValueSeperator(sep[1]))
 	}
 	opts = append(opts, flags.WithZeroDefault(zeroDft))
+	if required {
+		opts = append(opts, flags.WithRequired(required))
+	}
 
 	r.fs.AnyVar(val.Addr().Interface(), short, long, dft, desc, opts...)
 	return nil
 }
 
-func parseTag(field reflect.StructField) (short byte, long string, dft any, zeroDft bool, desc string, sep []string, err error) {
+func parseTag(field reflect.StructField) (short byte, long string, required bool, dft any, zeroDft bool, desc string, sep []string, err error) {
 	if tagShort := field.Tag.Get("short"); tagShort != "" {
 		if len(tagShort) > 1 {
 			err = fmt.Errorf("flagrouter: invalid short tag %q: length must be 1", tagShort)
@@ -519,6 +522,8 @@ func parseTag(field reflect.StructField) (short byte, long string, dft any, zero
 			sep[i] = string(seperator[i])
 		}
 	}
+
+	required, _ = strconv.ParseBool(field.Tag.Get("required"))
 
 	tagDft, zeroDft := field.Tag.Lookup("dft")
 	if tagDft != "" {
